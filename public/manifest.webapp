@@ -1,0 +1,23 @@
+{
+  "launch_path": "index.html",
+  "default_locale": "en",
+  "activities": {
+    "dhis": {
+      "href": "../../"
+    }
+  },
+  "appType": "APP",
+  "name": "WHO Dashboard",
+  "version": "0.1.0",
+  "icons": {
+    "48": "favicon.png"
+  },
+  "developer": {
+    "name": "DHIS2"
+  },
+  "dhis2": {
+    "apiVersion": "29"
+  },
+  "manifest_generated_at": "Mon Oct 14 2019 14:59:33 GMT+0300 (East Africa Time)",
+  "description": "WHO Dashboard"
+}
