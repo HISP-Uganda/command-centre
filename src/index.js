@@ -7,16 +7,18 @@ import { Provider } from "mobx-react";
 import App from './App';
 import './App.css';
 import 'react-grid-layout/css/styles.css';
-import 'react-resizable/css/styles.css'
+import 'react-resizable/css/styles.css';
+
 // import i18n from './locales';
 import { store } from './stores/Store';
-
+let baseUrl;
 if (process.env.NODE_ENV === 'development') {
-    config.baseUrl = 'http://localhost:8080/api'
-    // config.baseUrl = 'https://mrcommandcentre.hispuganda.org/api'
-    config.headers = { Authorization: 'Basic YWRtaW46ZGlzdHJpY3Q=' };
+    // config.baseUrl = 'http://localhost:8080/api'
+    // baseUrl = 'http://localhost:8080';
+    config.baseUrl = 'https://mrcommandcentre.org/api'
+    baseUrl = 'https://mrcommandcentre.org'
+    config.headers = { Authorization: 'Basic YWRtaW46RGlzdHJpY3QxIw==' };
 } else {
-    let baseUrl = '';
     let urlArray = window.location.pathname.split('/');
     let apiIndex = urlArray.indexOf('api');
     if (apiIndex > 1) {
@@ -35,7 +37,7 @@ const init = async () => {
     store.setD2(initializedD2);
     ReactDOM.render(
         <Provider store={store}>
-            <App d2={initializedD2} />
+            <App d2={initializedD2} baseUrl={baseUrl} />
         </Provider>, document.getElementById('root'));
     window.d2 = initializedD2;
 };

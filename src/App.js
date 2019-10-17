@@ -18,7 +18,7 @@ const { Header, Content, Footer } = Layout;
 @observer
 class App extends Component {
     render() {
-        const { d2 } = this.props
+        const { d2, baseUrl, store } = this.props
         return (
             <LocationProvider history={history}>
                 <Layout className="layout" style={{ width: '100vw', height: '100vh' }}>
@@ -28,8 +28,8 @@ class App extends Component {
                         </div>
                         <Menu
                             mode="horizontal"
-                            defaultSelectedKeys={['2']}
-                            style={{ lineHeight: '64px', background: '#000066', display: 'flex', marginRight: 'auto' }}
+                            selectedKeys={[store.active]}
+                            style={{ lineHeight: '64px', background: '#000066', display: 'flex' }}
                         >
                             <Menu.Item key="1" className="modified-item" style={{ background: '#95CEFF', width: 210, color: 'white' }}>
                                 <Link to="/">MEASLES RUBELLA (MR)</Link>
@@ -40,13 +40,17 @@ class App extends Component {
                             <Menu.Item key="3" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white' }}>
                                 <Link to="checklist">QUALITY CHECKLIST</Link>
                             </Menu.Item>
+
+                            <Menu.Item key="4" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white' }}>
+                                <a href={baseUrl}>DHIS2</a>
+                            </Menu.Item>
                         </Menu>
                     </Header>
                     <Content style={{ overflow: 'auto' }}>
                         <Router>
                             <MRDashboard path="/" d2={d2} />
                             <OPVDashboard path="/opv" d2={d2} />
-                            <CheckList path="/checklist" d2={d2} />
+                            <CheckList path="/checklist/*" d2={d2} />
                         </Router>
                     </Content>
                     <Footer style={{ textAlign: 'center', height: '64px' }}>Command Centre</Footer>

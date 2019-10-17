@@ -19,7 +19,8 @@ class Store {
     @observable level = [];
     @observable levelOptions = [];
     @observable groupOptions = [];
-    @observable router = new RouterStore()
+    @observable router = new RouterStore();
+    @observable active = '1'
 
 
     @observable dialogOpened = false;
@@ -32,6 +33,7 @@ class Store {
     @observable setLevel = (val) => this.level = val;
     @observable setLevelOptions = (val) => this.levelOptions = val;
     @observable setGroupOptions = (val) => this.groupOptions = val;
+    @observable setActive = (val) => this.active = val;
 
     @action setD2 = (val) => this.d2 = val;
     @action setOrganisationUnitGroups = (val) => this.organisationUnitGroups = val;

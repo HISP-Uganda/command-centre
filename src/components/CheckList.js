@@ -1,27 +1,7 @@
 import React from 'react';
 import { inject, observer } from "mobx-react";
-import { Card, Col, Row, Tabs, Button, Menu, Progress, Icon, Modal } from 'antd';
-import * as PropTypes from 'prop-types'
-import Highcharts from 'highcharts';
-import HC_more from 'highcharts/highcharts-more'
-import HighchartsReact from 'highcharts-react-official';
-import gauge from 'highcharts/modules/solid-gauge';
-import data from 'highcharts/modules/data';
-import maps from 'highcharts/modules/map';
-import MapChart from './Map';
-import OuTreeDialog from './dialogs/OuTreeDialog'
-
-import * as am4core from "@amcharts/amcharts4/core";
-// import * as am4charts from "@amcharts/amcharts4/charts";
-import am4themes_animated from "@amcharts/amcharts4/themes/animated";
-
-am4core.useTheme(am4themes_animated);
-
-HC_more(Highcharts);
-gauge(Highcharts);
-data(Highcharts)
-maps(Highcharts)
-const { TabPane } = Tabs;
+import { Router, Link } from "@reach/router";
+import { ColdChain, SuppliesDistribution, AdequateSupplies, PostArrangements, MonitoringAEFI, Practice, WasteManagement, SocialMobilization, MonitoringCoverage } from './ChecklistItems';
 @inject('store')
 @observer
 class CheckList extends React.Component {
@@ -31,19 +11,57 @@ class CheckList extends React.Component {
         super(props);
         const { store } = props;
         this.store = store;
+        this.store.setActive('2')
     }
 
-    callback = (key) => {
-        console.log(key);
-    }
     componentDidMount() {
 
     }
 
-
     render() {
-        return <div>
-            OPV
+        return <div style={{ display: 'flex', height: '100%', padding: 5 }}>
+
+            <div className="content" style={{ width: '20%', margin: 5 }}>
+                <div
+                    className="headers"
+                    style={{ lineHeight: '48px', background: '#D9EDF7', display: 'flex', padding: 5 }}
+                >
+                    <div style={{ fontSize: 20, textAlign: 'center' }}>SUPERVISION CHECKLIST {this.store.selected.length > 0 ? this.store.selected[0].displayName : ''}
+                    </div>
+                </div>
+                <nav style={{ display: 'flex', flexDirection: 'column', paddingBottom: 10 }}>
+                    <Link className="checklist" to="./">COLD CHAINS</Link>
+                    <Link className="checklist" to="supplies-distribution">SUPPLIES DISTRIBUTION</Link>
+                    <Link className="checklist" to="adequate-supplies">ADEQUATE SUPPLIES</Link>
+                    <Link className="checklist" to="post-arrangements">POST ARRANGEMENTS</Link>
+                    <Link className="checklist" to="monitoring-aefi">MONITORING AEFI</Link>
+                    <Link className="checklist" to="practice">PRACTICE AND SAFETY</Link>
+                    <Link className="checklist" to="wastage-management">WASTAGE MANAGEMENT</Link>
+                    <Link className="checklist" to="social-mobilization">SOCIAL MOBILIZATION</Link>
+                    <Link className="checklist" to="monitoring-coverage">MONITORING COVERAGE</Link>
+                </nav>
+            </div>
+            <div style={{ margin: 5, width: '80%' }} className="content">
+                <div
+                    className="headers"
+                    style={{ lineHeight: '48px', background: '#D9EDF7', display: 'flex', padding: 5 }}
+                >
+                    <div style={{ fontSize: 20, textAlign: 'center' }}>ADEQUACY OF SUPPLIES AND COMMODITIES - {this.store.selected.length > 0 ? this.store.selected[0].displayName : ''}
+                    </div>
+                </div>
+                <Router>
+                    <ColdChain path="/" />
+                    <SuppliesDistribution path="/supplies-distribution" />
+                    <AdequateSupplies path="/adequate-supplies" />
+                    <PostArrangements path="/post-arrangements" />
+                    <MonitoringAEFI path="/monitoring-aefi" />
+                    <Practice path="/practice" />
+                    <WasteManagement path="/wastage-management" />
+                    <SocialMobilization path="/social-mobilization" />
+                    <MonitoringCoverage path="/monitoring-coverage" />
+                </Router>
+            </div>
+
         </div>
     }
 

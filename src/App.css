@@ -56,3 +56,39 @@
   text-align: center;
   justify-content: center;
 }
+
+.checklist {
+  background: #ccccff;
+  border: #3d80cc solid 1px;
+  padding: 10px;
+}
+
+#customers {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#customers td,
+#customers th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+#customers tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+#customers tr:hover {
+  background-color: #ddd;
+}
+
+#customers th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #d9edf7;
+}
+
+.content {
+  border: 1px solid #d9edf7;
+}
