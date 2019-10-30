@@ -5,6 +5,7 @@
   "homepage": "./",
   "dependencies": {
     "@amcharts/amcharts4": "^4.6.9",
+    "@antv/data-set": "^0.10.2",
     "@dhis2/d2-i18n": "^1.0.5",
     "@dhis2/d2-ui-app": "^2.0.0",
     "@dhis2/d2-ui-core": "^6.1.1",
@@ -16,6 +17,7 @@
     "@dhis2/ui-core": "^3.6.3",
     "@material-ui/core": "^4.2.1",
     "@material-ui/icons": "^4.2.1",
+    "@nivo/geo": "^0.59.2",
     "@reach/router": "^1.2.1",
     "antd": "^3.20.3",
     "axios": "^0.19.0",
@@ -24,6 +26,7 @@
     "highcharts": "^7.2.0",
     "highcharts-react-official": "^2.2.2",
     "lodash": "^4.17.14",
+    "mapbox-gl": "^1.4.1",
     "material-design-icons": "^3.0.1",
     "mobx": "^5.13.0",
     "mobx-react": "^6.1.1",
@@ -33,9 +36,12 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-grid-layout": "^0.16.6",
+    "react-mapbox-gl": "^4.6.1",
     "react-scripts": "3.0.1",
     "react-vis": "^1.11.7",
-    "socket.io-client": "^2.3.0"
+    "shortid": "^2.2.15",
+    "socket.io-client": "^2.3.0",
+    "viser-react": "^2.4.6"
   },
   "scripts": {
     "prestart": "npm run extract-pot && npm run localize && npm run manifest",

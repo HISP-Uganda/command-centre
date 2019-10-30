@@ -18,6 +18,7 @@ if (process.env.NODE_ENV === 'development') {
     config.baseUrl = 'https://mrcommandcentre.org/api'
     baseUrl = 'https://mrcommandcentre.org'
     config.headers = { Authorization: 'Basic YWRtaW46RGlzdHJpY3QxIw==' };
+    // config.headers = { Authorization: 'Basic YWRtaW46ZGlzdHJpY3Q=' };
 } else {
     let urlArray = window.location.pathname.split('/');
     let apiIndex = urlArray.indexOf('api');

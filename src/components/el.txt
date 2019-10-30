@@ -1,0 +1,7 @@
+curl -X GET "http://213.136.94.124:9200/_search?pretty" -H 'Content-Type: application/json' -d'
+{
+    "query": {
+        "match_all": {}
+    }
+}
+'

@@ -1,6 +1,6 @@
 import React from 'react'
 import { Responsive, WidthProvider } from 'react-grid-layout';
-import { Tabs, Progress } from 'antd';
+import { Tabs, Progress, Table } from 'antd';
 import OuTreeDialog from './dialogs/OuTreeDialog';
 import { inject, observer } from "mobx-react";
 import Highcharts from 'highcharts';
@@ -9,17 +9,122 @@ import HighchartsReact from 'highcharts-react-official';
 import gauge from 'highcharts/modules/solid-gauge';
 import data from 'highcharts/modules/data';
 import maps from 'highcharts/modules/map';
+import exporting from 'highcharts/modules/exporting';
+import fullScreen from 'highcharts/modules/full-screen'
 import MapChart from './Map';
 import * as am4core from "@amcharts/amcharts4/core";
+import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
 
 am4core.useTheme(am4themes_animated);
 
 HC_more(Highcharts);
 gauge(Highcharts);
-data(Highcharts)
-maps(Highcharts)
+data(Highcharts);
+maps(Highcharts);
+exporting(Highcharts);
+fullScreen(Highcharts)
 const { TabPane } = Tabs;
+
+const columns = [
+    {
+        title: 'Organisation',
+        dataIndex: 'ou',
+        key: 'ou',
+        width: 100,
+        fixed: 'left'
+    },
+    {
+        title: 'Day',
+        dataIndex: 'day',
+        width: 200,
+        key: 'day',
+    }
+    , {
+        title: 'Targe Population',
+        dataIndex: 'target',
+        width: 200,
+        key: 'target_population',
+    }, {
+        title: 'No. Posts',
+        dataIndex: 'posts.value',
+        key: 'posts',
+    }, {
+        title: 'Health Workers',
+        width: 200,
+        dataIndex: 'number_health_workers.value',
+        key: 'workers',
+    },
+    {
+        title: 'Mobilizers',
+        dataIndex: 'number_mobilizers.value',
+        width: 200,
+        key: 'mobilizers',
+    }, {
+        title: 'Vaccine Issued',
+        dataIndex: 'no_vaccine_vials_issued.value',
+        width: 200,
+        key: 'issued',
+    }, {
+        title: 'Vaccinated',
+        dataIndex: 'children_vaccinated.value',
+        width: 200,
+        key: 'children_vaccinated',
+    }, {
+        title: 'Discarded (contamination)',
+        dataIndex: 'no_vials_discarded_due_contamination.value',
+        width: 200,
+        key: 'contamination',
+    }, {
+        title: 'Discarded (vvm color change)',
+        dataIndex: 'no_vials_discarded_due_vvm_color_change.value',
+        width: 200,
+        key: 'color',
+    }, {
+        title: 'Discarded (partial use)',
+        dataIndex: 'no_vials_discarded_due_partial_use.value',
+        width: 200,
+        key: 'partial',
+    },
+    {
+        title: 'Discarded (other factors)',
+        dataIndex: 'no_vials_discarded_other_factors.value',
+        width: 200,
+        key: 'other',
+    },
+    {
+        title: 'Discarded (total)',
+        dataIndex: 'no_vials_discarded.value',
+        width: 200,
+        key: 'total',
+    },
+    {
+        title: 'Returned',
+        dataIndex: 'no_vaccine_vials_returned_unopened.value',
+        width: 100,
+        key: 'returned',
+    },
+    {
+        title: 'Wastage',
+        dataIndex: 'wastage',
+        width: 100,
+        key: 'wastage',
+    },
+    {
+        title: 'Workload',
+        dataIndex: 'workload',
+        width: 100,
+        key: 'workload',
+    },
+    {
+        title: 'Coverage',
+        key: 'coverage',
+        width: 100,
+        dataIndex: 'coverage'
+    }
+];
+
+
 
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
@@ -32,8 +137,7 @@ class OPVDashboard extends React.Component {
         super(props);
         const { store } = props;
         this.store = store;
-        this.store.setActive('2')
-
+        this.store.setActive('1')
     }
 
     callback = (key) => {
@@ -54,17 +158,20 @@ class OPVDashboard extends React.Component {
         const { d2 } = this.props;
         const layouts = {
             lg: [
-                { i: 'a', x: 0, y: 0, w: 9, h: 1 },
-                { i: 'b', x: 10, y: 0, w: 3, h: 1 },
-                { i: 'd', x: 0, y: 2, w: 6, h: 2 },
-                { i: 'e', x: 6, y: 2, w: 3, h: 4 },
-                { i: 'f', x: 0, y: 2, w: 6, h: 11 },
-                { i: 'g', x: 6, y: 2, w: 3, h: 9 },
-                { i: 'h', x: 10, y: 1, w: 3, h: 2 },
-                { i: 'i', x: 10, y: 2, w: 3, h: 2 },
-                { i: 'j', x: 10, y: 3, w: 3, h: 5 },
-                { i: 'k', x: 10, y: 4, w: 3, h: 2 },
-                { i: 'l', x: 10, y: 5, w: 3, h: 2 }
+                { "w": 9, "h": 1, "x": 0, "y": 0, "i": "a", "moved": false, "static": false },
+                { "w": 3, "h": 1, "x": 9, "y": 0, "i": "b", "moved": false, "static": false },
+                { "w": 6, "h": 2, "x": 0, "y": 1, "i": "d", "moved": false, "static": false },
+                { "w": 6, "h": 2, "x": 0, "y": 3, "i": "m", "moved": false, "static": false },
+                { "w": 3, "h": 4, "x": 6, "y": 1, "i": "e", "moved": false, "static": false },
+                { "w": 6, "h": 9, "x": 0, "y": 5, "i": "f", "moved": false, "static": false },
+                { "w": 12, "h": 11, "x": 0, "y": 14, "i": "n", "moved": false, "static": false },
+                { "w": 12, "h": 11, "x": 0, "y": 25, "i": "o", "moved": false, "static": false },
+                { "w": 3, "h": 9, "x": 6, "y": 5, "i": "g", "moved": false, "static": false },
+                { "w": 3, "h": 2, "x": 9, "y": 1, "i": "h", "moved": false, "static": false },
+                { "w": 3, "h": 2, "x": 9, "y": 3, "i": "i", "moved": false, "static": false },
+                { "w": 3, "h": 5, "x": 9, "y": 5, "i": "j", "moved": false, "static": false },
+                { "w": 3, "h": 2, "x": 9, "y": 10, "i": "k", "moved": false, "static": false },
+                { "w": 3, "h": 2, "x": 9, "y": 12, "i": "l", "moved": false, "static": false }
             ],
             xxl: [
                 { i: 'a', x: 0, y: 0, w: 9, h: 1 },
@@ -86,16 +193,18 @@ class OPVDashboard extends React.Component {
                 breakpoints={{ xxl: 3400, lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
                 cols={{ xxl: 12, lg: 12, md: 12, sm: 12, xs: 12, xxs: 12 }}
                 rowHeight={56}
+                onLayoutChange={(layout) => console.log(JSON.stringify(layout))}
             >
                 <div key="a" style={{ background: 'white' }}>
                     <div
                         className="headers"
                         style={{ lineHeight: '48px', background: '#D9EDF7', display: 'flex', padding: 5 }}
                     >
-                        <div style={{ fontSize: 20, textAlign: 'center' }}>OPV - {this.store.selected.length > 0 ? this.store.selected[0].displayName : ''}</div>
+                        <div style={{ fontSize: 20, textAlign: 'center' }}>POLIO (OPV) - {this.store.selected.length > 0 ? this.store.selected[0].displayName : ''}</div>
                         <OuTreeDialog d2={d2} />
                     </div>
                 </div>
+
                 <div key="b" style={{ background: 'white' }}>
                     <div
                         style={{ lineHeight: '48px', background: '#D9EDF7', display: 'flex', padding: 5 }}
@@ -107,24 +216,52 @@ class OPVDashboard extends React.Component {
                     <div className="container" style={{ width: "20%" }}>
                         <div style={{
                             color: '#000066'
-                        }}>VACCINATION POSTS</div>
+                        }}>TOTAL NO. OF POSTS</div>
+                        <div className="red">{this.store.MR.posts}</div>
+                    </div>
+
+                    <div className="container" style={{ width: "20%" }}>
+                        <div style={{
+                            color: '#000066'
+                        }}>NO. OF POSTS REPORTING </div>
                         <div className="red">{this.store.MR.opvTextValues.posts}</div>
                     </div>
+
                     <div className="container" style={{ width: "20%" }}>
-                        <div style={{ color: '#000066' }}>VACCINATION TARGET</div>
+                        <div style={{
+                            color: '#000066'
+                        }}>REPORTING RATES </div>
+                        <div className="red">{this.store.MR.posts === 0 ? 0 : (100 * this.store.MR.opvTextValues.posts / this.store.MR.posts).toFixed(1)}%</div>
+                    </div>
+                    <div className="container" style={{ width: "20%" }}>
+                        <div style={{ color: '#000066' }}>CHILDREN VACCINATED</div>
+                        <div className="green">{this.store.MR.opvTextValues.children_vaccinated}</div>
+                    </div>
+
+                    <Progress strokeWidth={15} showInfo={false} type="circle" percent={this.store.MR.posts === 0 ? 0 : (100 * this.store.MR.opvTextValues.posts / this.store.MR.posts)} width={80} style={{ width: '20%', textAlign: "center" }} />
+                </div>
+
+                <div key="m" style={{ background: 'white' }} className="flex-center">
+                    <div className="container" style={{ width: "2o%" }}>
+                        <div style={{ color: '#000066' }}>POPULATION TARGET (UBOS 2019)</div>
+                        <div className="red">{this.store.MR.currentMRTarget}</div>
+                    </div>
+
+                    <div className="container" style={{ width: "20%" }}>
+                        <div style={{ color: '#000066' }}>POPULATION TARGET (DISTRICT)</div>
                         <div className="red">{this.store.MR.opvTextValues.target_population}</div>
                     </div>
 
                     <div className="container" style={{ width: "20%" }}>
-                        <div style={{ color: '#000066' }}>CHILDREN VACCCINATED</div>
-                        <div className="green">{this.store.MR.opvTextValues.children_vaccinated}</div>
+                        <div style={{ color: '#000066' }}>OPV COVERAGE (DISTRICT)</div>
+                        <div className="green">{this.store.MR.opvTextValues.covarage}%</div>
                     </div>
 
                     <div className="container" style={{ width: "20%" }}>
-                        <div style={{ color: '#000066' }}>OPV Coverage</div>
-                        <div className="green">{this.store.MR.opvTextValues.covarage}%</div>
+                        <div style={{ color: '#000066' }}>OPV COVERAGE (UBOS)</div>
+                        <div className="green">{this.store.MR.opvEstimates}%</div>
                     </div>
-                    <Progress strokeWidth={15} showInfo={false} type="circle" percent={parseFloat(this.store.MR.opvTextValues.covarage)} width={80} style={{ width: '20%', textAlign: "center" }} />
+                    <Progress strokeWidth={15} showInfo={false} type="circle" percent={isNaN(this.store.MR.opvEstimates) ? 0 : this.store.MR.opvEstimates} width={80} style={{ width: '20%', textAlign: "center" }} />
                 </div>
                 <div key="e" style={{ background: 'white' }}>
                     <div id="chartdiv" style={{ width: "100%", height: "250px" }}></div>
@@ -159,6 +296,13 @@ class OPVDashboard extends React.Component {
                         </TabPane>
                     </Tabs>
                 </div>
+
+                <div key="n" style={{ background: 'white' }}>
+                    <Table dataSource={this.store.MR.opvTableData} columns={columns} loading={this.store.MR.loading} pagination={{ pageSize: 10 }} rowKey="id" scroll={{ x: true }} size="middle" />
+                </div>
+                <div key="o" style={{ background: 'white' }}>
+                    <Table dataSource={this.store.MR.cumulativeOPVTableData} columns={columns} loading={this.store.MR.loading} pagination={{ pageSize: 10 }} rowKey="id" scroll={{ x: true }} size="middle" />
+                </div>
                 <div key="g" style={{ background: 'white' }}>
                     <MapChart options={this.store.MR.opvMap} />
                 </div>
@@ -166,23 +310,23 @@ class OPVDashboard extends React.Component {
                     <div className="container" style={{ width: '50%' }}>
                         <div style={{
                             color: '#000066'
-                        }}>ISSUED</div>
-                        <div className="red">{this.store.MR.opvTextValues.no_vaccine_vials_issued ? this.store.MR.opvTextValues.no_vaccine_vials_issued * 10 : 0}</div>
+                        }}>DOSES ISSUED</div>
+                        <div className="red">{this.store.MR.opvTextValues.no_vaccine_vials_issued ? this.store.MR.opvTextValues.no_vaccine_vials_issued * 20 : 0}</div>
                     </div>
 
                     <div className="container" style={{ width: '50%' }}>
-                        <div style={{ color: '#000066' }}>RETURNED</div>
-                        <div className="red">{this.store.MR.opvTextValues.no_vaccine_vials_returned_unopened ? this.store.MR.opvTextValues.no_vaccine_vials_returned_unopened * 10 : 0}</div>
+                        <div style={{ color: '#000066' }}>DOSES USED</div>
+                        <div className="red">{this.store.MR.opvTextValues.used ? this.store.MR.opvTextValues.used: 0}</div>
                     </div>
                 </div>
                 <div key="i" style={{ background: 'white' }} className="flex-center">
                     <div className="container" style={{ width: '50%' }}>
-                        <div style={{ color: '#000066' }}>DISCARDED</div>
+                        <div style={{ color: '#000066' }}>DOSES DISCARDED</div>
                         <div className="red">{this.store.MR.opvTextValues.no_vials_discarded ? this.store.MR.opvTextValues.no_vials_discarded * 20 : 0}</div>
                     </div>
 
                     <div className="container" style={{ width: '50%' }}>
-                        <div style={{ color: '#000066' }}>ADMINISTERED</div>
+                        <div style={{ color: '#000066' }}>CHILDREN VACCINATED</div>
                         <div className="green">{this.store.MR.opvTextValues.children_vaccinated}</div>
                     </div>
                 </div>

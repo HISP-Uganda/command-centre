@@ -18,7 +18,10 @@ const { Header, Content, Footer } = Layout;
 @observer
 class App extends Component {
     render() {
-        const { d2, baseUrl, store } = this.props
+        const { d2, baseUrl, store } = this.props;
+        const logout = `${baseUrl}/dhis-web-commons-security/logout.action`;
+        const dataEntry = `${baseUrl}/dhis-web-dataentry/index.action`
+        const dashboard = `${baseUrl}/dhis-web-dashboard/index.action`
         return (
             <LocationProvider history={history}>
                 <Layout className="layout" style={{ width: '100vw', height: '100vh' }}>
@@ -41,8 +44,16 @@ class App extends Component {
                                 <Link to="checklist">QUALITY CHECKLIST</Link>
                             </Menu.Item>
 
-                            <Menu.Item key="4" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white' }}>
-                                <a href={baseUrl}>DHIS2</a>
+                            <Menu.Item key="4" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white', marginRight: 'auto' }}>
+                                <a href={dataEntry}>DATA ENTRY FORM 4</a>
+                            </Menu.Item>
+
+                            <Menu.Item key="4" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white', marginRight: 'auto' }}>
+                                <a href={dashboard}>DHIS2 DASHBOARD</a>
+                            </Menu.Item>
+
+                            <Menu.Item key="5" className="modified-item" style={{ background: '#95CEFF', marginLeft: 2, width: 210, color: 'white' }}>
+                                <a href={logout}>LOGOUT</a>
                             </Menu.Item>
                         </Menu>
                     </Header>

@@ -1,4 +1,4 @@
-import { Button, Checkbox } from "antd";
+import { Button } from "antd";
 import React from "react";
 import { inject, observer } from "mobx-react";
 import OrgUnitDialog from '@dhis2/d2-ui-org-unit-dialog';
@@ -20,9 +20,8 @@ class OuTreeDialog extends React.Component {
         return (
             <div style={{ marginLeft: 'auto' }}>
                 <div >
-                    <Checkbox onChange={this.store.MR.setAccumulate}>Accumulate</Checkbox>
                     <Button ghost size="large" htmlType="button" type="primary" onClick={this.store.toggleDialog}>
-                        Select org units
+                        Filter
                     </Button>
                 </div>
                 {this.store.root &&

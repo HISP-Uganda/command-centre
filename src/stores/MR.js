@@ -1,38 +1,41 @@
 import { action, computed, observable } from 'mobx';
 import socketClient from 'socket.io-client';
 import axios from 'axios';
-import { isEmpty, fromPairs } from 'lodash';
+import { isEmpty, fromPairs, groupBy, flatten } from 'lodash';
 // import mapData from './mapData';
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
+import * as am4maps from "@amcharts/amcharts4/maps";
+import shortid from 'shortid';
 
 // import * as am4charts from "@amcharts/amcharts4/charts";
 import am4themes_animated from "@amcharts/amcharts4/themes/animated";
-import { flatten } from '@amcharts/amcharts4/.internal/core/utils/Iterator';
+import { mrTargets, opvTargets } from './Targets'
 
 am4core.useTheme(am4themes_animated);
 const url = 'https://mrengine.hispuganda.org';
-// const url = 'http://localhost:3001';
 const socket = socketClient(url);
 
 
 const findDay = (val) => {
-    if (val === String('ZpyTYdeiDkA').toLowerCase()) {
-        return 'Day One'
-    } else if (val === String('aEqdGN2HOLQ').toLowerCase()) {
-        return 'Day Two';
-    } else if (val === String('WybnHDOJacu').toLowerCase()) {
-        return 'Day Three';
-    } else if (val === String('UK2et7FhfIq').toLowerCase()) {
-        return 'Day Four';
-    } else if (val === String('jRUmp92Y4bE').toLowerCase()) {
+    if (val === 'ZpyTYdeiDkA') {
+        return 'Day 1'
+    } else if (val === 'aEqdGN2HOLQ') {
+        return 'Day 2';
+    } else if (val === 'WybnHDOJacu') {
+        return 'Day 3';
+    } else if (val === 'UK2et7FhfIq') {
+        return 'Day 4';
+    } else if (val === 'jRUmp92Y4bE') {
         return 'Day 5';
+    } else if (val === 'ixtIbhR0XdG') {
+        return 'Day 6';
+    } else if (val === 'c7HMdHJ9R1C') {
+        return 'Day 7';
     } else {
-        return 'HllvX50cXC0'
+        return 'Other Days'
     }
 }
-
-
 export class MR {
 
     @observable data;
@@ -49,11 +52,37 @@ export class MR {
     @observable mapData;
     @observable currentUnits = {}
     @observable d2;
-    @observable mapData;
     @observable opvMapData;
+    @observable mrMapData;
     @observable mapSearch = 'Subcounty';
     @observable currentMapSearch;
+    @observable currentOPVTarget = 0;
+    @observable currentMRTarget = 0;
 
+    @observable opvTableData;
+    @observable mrTableData;
+
+    @observable cumulativeOPVTableData;
+    @observable cumulativeMRTableData;
+
+    @observable opvSummaryData;
+    @observable mrSummaryData;
+    @observable loading = true;
+    @observable currentSelected;
+
+    @observable currentTargets = {};
+
+    @observable currentSingleTarget = {
+        Population: 0,
+        MRTargetPopulation: 0,
+        OPVTargetPopulation: 0,
+        SubCounties: 0,
+        Posts: 0,
+        TownCouncils: 0,
+        Schools: 0
+    };
+
+    @observable posts = 0;
 
     constructor() {
         socket.on("data", () => this.fetchData());
@@ -68,40 +97,144 @@ export class MR {
     @action setD2 = val => this.d2 = val;
 
     @action setCurrentSearch = async val => {
+        const api = this.d2.Api.getApi();
         this.currentValue = val.id;
+        this.currentSelected = val;
 
         const level = val.path.split('/').length - 1;
-
-        if (level === 2) {
+        if (level === 1) {
+            this.currentSearch = 'national';
+        } else if (level === 2) {
             this.currentSearch = 'regions';
         } else if (level === 3) {
-            this.currentSearch = 'districts'
+            this.currentSearch = 'districts';
+            this.currentOPVTarget = opvTargets.filter(op => op.ou === val.id).reduce((a, b) => a + b.value, 0);
+            this.currentMRTarget = mrTargets.filter(op => op.ou === val.id).reduce((a, b) => a + b.value, 0)
         } else if (level === 4) {
             this.currentSearch = 'subcounties'
         }
 
-        const api = this.d2.Api.getApi();
+        const { children } = await api.get('organisationUnits/' + this.currentValue, { fields: 'children[id,name]' });
+        this.currentUnits = fromPairs(children.map(child => [child.id, String(child.name).trim()]));
 
-        const { children } = await api.get('organisationUnits/' + val.id, { fields: 'children[id,name]' });
-
-        this.currentUnits = fromPairs(children.map(child => [String(child.id).toLowerCase(), child.name]));
-
-        if (this.currentSearch && this.currentSearch === 'districts') {
-            const district = String(val.displayName);
-            const { data: map } = await axios.get(`${url}/uganda?search=${district}`);
-            this.mapData = map;
-        }
-        if (level === 1) {
-            const { data: map } = await axios.get(`${url}/country`);
-            this.mapData = map;
-            this.mapSearch = 'District18';
-            this.currentMapSearch = 'regions';
-        }
         await this.fetchData();
+
     };
+
+    processSummary = (buckets, summary, units, targets, isMR = true) => {
+        let currentSummaryData = [];
+        let currentTableData = [];
+        let cumulative = [];
+
+
+        buckets.forEach(({ days, ...rest }) => {
+            const dayData = days.buckets.map(b => {
+                const numerator = parseInt(b['children_vaccinated']['value'], 10);
+                const target = parseInt(b['target_population']['value'], 10);
+                const vials = parseInt(b['no_vaccine_vials_issued']['value'], 10);
+                const returned = parseInt(b['no_vaccine_vials_returned_unopened']['value'], 10);
+                const workers = parseInt(b['number_health_workers']['value']);
+
+                let bossTarget = 0;
+                if (targets[rest.key] && isMR) {
+                    bossTarget = targets[rest.key].MRTargetPopulation
+                } else if (targets[rest.key] && !isMR) {
+                    bossTarget = targets[rest.key].OPVTargetPopulation
+                }
+
+
+                let workload = workers !== 0 ? (numerator / workers).toFixed(0) : 0;
+                const coverage = target !== 0 ? (numerator * 100 / target).toFixed(1) : 0
+                const expected = (vials - returned) * (isMR?10:20);
+                let wastage = 100 * (expected - numerator) / expected;
+
+                const bossCoverage = bossTarget !== 0 ? (100 * numerator / bossTarget).toFixed(1) : 0
+
+                return {
+                    ...b,
+                    ou: units[rest.key],
+                    day: findDay(b.key),
+                    id: shortid.generate(),
+                    wastage: `${wastage.toFixed(1)}%`,
+                    workload,
+                    coverage: `${coverage}%`,
+                    target,
+                    bossTarget,
+                    bossCoverage: `${bossCoverage}%`
+                }
+            });
+            currentTableData = [...currentTableData, ...dayData]
+        });
+
+        const summrized = summary.map(d => {
+            const numerator = parseInt(d['children_vaccinated']['value'], 10);
+
+            const vials = parseInt(d['no_vaccine_vials_issued']['value'], 10);
+            const returned = parseInt(d['no_vaccine_vials_returned_unopened']['value'], 10);
+            const workers = parseInt(d['number_health_workers']['value']);
+
+            const expected = (vials - returned) * (isMR?10:20);
+
+            let bossTarget = 0;
+
+            if (targets[d.key] && isMR) {
+                bossTarget = targets[d.key].MRTargetPopulation
+            } else if (targets[d.key] && !isMR) {
+                bossTarget = targets[d.key].OPVTargetPopulation
+            }
+            const bossCoverage = bossTarget !== 0 ? (100 * numerator / bossTarget) : 0
+            let workload = workers !== 0 ? (numerator / workers).toFixed(0) : 0;
+            let wastage = 100 * (expected - numerator) / expected;
+            let target = mrTargets.filter(op => op.ou === d.key).reduce((a, b) => a + b.value, 0);
+
+            if (target === 0) {
+                target = opvTargets.filter(op => op.ou === d.key).reduce((a, b) => a + b.value, 0)
+            }
+
+            const coverage = target !== 0 ? (numerator * 100 / target).toFixed(1) : 0
+
+            cumulative = [...cumulative, { ...d, ou: units[d.key], target, bossTarget, bossCoverage, coverage: `${coverage}%`, workload, wastage: `${wastage.toFixed(1)}%`, day: 'ALL', id: shortid.generate() }]
+
+            return [d.key, bossCoverage];
+        });
+        currentSummaryData = [...currentSummaryData, ...summrized]
+        return { currentSummaryData, currentTableData, cumulative }
+
+    }
+
+    fetchRegionalDistricts = async (units, targets, what = '') => {
+        const mrMapUrls = this.summary.map(d => {
+            const h = `${url}${what}?type=${this.currentMapSearch}&search=${d.key}`;
+            return axios.get(h)
+        });
+        const isMR = what === '';
+
+        const mr = await Promise.all(mrMapUrls);
+        let summaryData = [];
+        let tableData = [];
+        let cumulativeSummary = []
+
+        mr.forEach((response, i) => {
+            const { data: { aggregations: { data: { buckets }, summary: { buckets: summary } } } } = response;
+            let { currentSummaryData, currentTableData, cumulative } = this.processSummary(buckets, summary, units, targets, isMR);
+            summaryData = [...summaryData, ...currentSummaryData];
+            tableData = [...tableData, ...currentTableData];
+            cumulativeSummary = [...cumulativeSummary, ...cumulative]
+        });
+
+        return {
+            summaryData,
+            tableData,
+            cumulativeSummary
+        }
+    }
 
     @action
     fetchData = async () => {
+        const api = this.d2.Api.getApi();
+
+        this.loading = true;
+
         try {
             const { data: { aggregations: { data: { buckets }, overall: { buckets: daily }, single, summary: { buckets: summary } } } } = await axios.get(this.currentUrl);
             this.data = buckets;
@@ -111,40 +244,86 @@ export class MR {
 
             const { data: { aggregations: { data: { buckets: opvData }, overall: { buckets: dailyOPV }, single: singleOPV, summary: { buckets: opvSummary } } } } = await axios.get(this.currentOPVUrl);
             this.opvData = opvData;
-            this.dailyOPV = dailyOPV
-            this.opvSummary = opvSummary
-            this.singleOPV = singleOPV
+            this.dailyOPV = dailyOPV;
+            this.opvSummary = opvSummary;
+            this.singleOPV = singleOPV;
 
-            const opvMapUrls = summary.map(d => {
-                const h = `${url}/opv?type=${this.currentMapSearch}&search=${d.key}`;
-                return axios.get(h)
-            });
-            const api = this.d2.Api.getApi();
+            if (this.currentSearch === 'national') {
+                const { data: { region, regional, districts } } = await axios.get(`${url}/targets`);
+                this.currentOPVTarget = region.OPVTargetPopulation;
+                this.currentMRTarget = region.MRTargetPopulation;
+                this.posts = region.Posts + region.Schools
+                this.currentTargets = regional;
+                this.currentSingleTarget = region;
+                this.mapSearch = 'District18';
+                this.currentMapSearch = 'regions';
+                const { organisationUnits } = await api.get('organisationUnits', { fields: 'id,name', level: 3, paging: false });
+                const units = fromPairs(organisationUnits.map(child => [child.id, String(child.name).trim()]));
+                const { summaryData, tableData, cumulativeSummary } = await this.fetchRegionalDistricts(units, districts);
+                const { summaryData: opvSummaryData, tableData: opvTableData, cumulativeSummary: opvCumulative } = await this.fetchRegionalDistricts(units, districts, '/opv');
+                this.opvTableData = opvTableData;
+                this.mrTableData = tableData;
+                this.opvSummaryData = opvSummaryData;
+                this.mrSummaryData = summaryData;
+                this.cumulativeMRTableData = cumulativeSummary;
+                this.cumulativeOPVTableData = opvCumulative;
+                const { data: mapData } = await axios.get(`${url}/country`);
+                this.mapData = mapData;
 
-            const { organisationUnits } = await api.get('organisationUnits', { fields: 'id,name', level: 3 });
+            } else {
+                if (this.currentSearch && this.currentSearch === 'districts') {
+                    const { data: map } = await axios.get(`${url}/uganda?search=${this.currentValue}`);
+                    const { data: { district, subCounties } } = await axios.get(`${url}/districtTargets?search=${this.currentValue}`);
 
-            const currentDistricts = fromPairs(organisationUnits.map(child => [String(child.id).toLowerCase(), child.name]));
+                    const { currentSummaryData, currentTableData, cumulative } = this.processSummary(buckets, summary, this.currentUnits, subCounties);
+                    const { currentSummaryData: currentOPVSummaryData, currentTableData: currentOPVTableData, cumulative: opvCumulative } = this.processSummary(buckets, summary, this.currentUnits, subCounties);
 
-            const opv = await Promise.all(opvMapUrls);
+                    this.opvTableData = currentOPVTableData;
+                    this.mrTableData = currentTableData;
+                    this.opvSummaryData = currentOPVSummaryData;
+                    this.mrSummaryData = currentSummaryData
+                    this.cumulativeMRTableData = cumulative;
+                    this.cumulativeOPVTableData = opvCumulative;
 
-            const intermediate = opv.map(response => {
-                const { data: { aggregations: { summary: { buckets: opvSummary } } } } = response;
-                return opvSummary.map(d => {
+                    this.mapData = map;
+                    this.currentOPVTarget = district.OPVTargetPopulation;
+                    this.currentMRTarget = district.MRTargetPopulation;
+                    this.posts = district.Posts + district.Schools;
+                    this.currentSingleTarget = district;
+                    this.currentTargets = subCounties;
+                } else if (this.currentSearch && this.currentSearch === 'regions') {
+                    const { data: { region, districts } } = await axios.get(`${url}/regionalTargets?search=${this.currentValue}`);
+                    const { data: map } = await axios.get(`${url}/regions?search=${this.currentValue}`);
 
-                    const denominator = parseInt(d['target_population']['value'], 10);
-                    const numerator = parseInt(d['children_vaccinated']['value'], 10);
-                    let value = 0;
-                    if (!isNaN(denominator) && !isNaN(numerator)) {
-                        value = denominator !== 0 ? numerator * 100 / denominator : 0
-                    }
-                    return [currentDistricts[d.key], value]
+                    const { currentSummaryData, currentTableData, cumulative } = this.processSummary(buckets, summary, this.currentUnits, districts);
+                    const { currentSummaryData: currentOPVSummaryData, currentTableData: currentOPVTableData, cumulative: opvCumulative } = this.processSummary(buckets, summary, this.currentUnits, districts);
 
-                })
-            });
-            this.opvMapData = flatten(intermediate)
+                    this.opvTableData = currentOPVTableData;
+                    this.mrTableData = currentTableData;
+                    this.opvSummaryData = currentOPVSummaryData;
+                    this.mrSummaryData = currentSummaryData
+                    this.cumulativeMRTableData = cumulative;
+                    this.cumulativeOPVTableData = opvCumulative;
+
+                    this.currentOPVTarget = region.OPVTargetPopulation;
+                    this.currentMRTarget = region.MRTargetPopulation;
+                    this.posts = region.Posts + region.Schools;;
+                    this.currentSingleTarget = region;
+                    this.currentTargets = districts;
+                    this.mapData = map;
+                } else if (this.currentSearch && this.currentSearch === 'subcounties') {
+                    // const { data: targets } = await axios.get(`${url}/regionalTargets?search=${this.currentValue}`);
+                    // const { data: map } = await axios.get(`${url}/regions?search=${this.currentValue}`);
+                    // this.currentOPVTarget = targets.OPVTargetPopulation;
+                    // this.currentMRTarget = targets.MRTargetPopulation;
+                    // this.posts = targets.Posts
+                    // this.mapData = map;
+                }
+            }
         } catch (error) {
             console.log(error)
         }
+        this.loading = false;
     }
 
     @computed
@@ -163,16 +342,6 @@ export class MR {
         return `${url}/opv`;
     }
 
-    // @computed
-    // get currentOPVMapUrl() {
-    //     if (this.currentMapSearch && this.summary) {
-    //         return this.summary(d => {
-    //             return `${url}/opv?type=${this.currentMapSearch}&search=${d.key}`
-    //         })
-    //     }
-    //     return []
-    // }
-
     @computed
     get vaccinated() {
 
@@ -189,9 +358,16 @@ export class MR {
         });
 
         let target = this.daily.map(d => {
+            const day = findDay(d.key);
+            let target = 0;
+            if (day <= 'Day 3') {
+                target = Math.ceil(this.currentSingleTarget.MRTargetPopulation * 0.8 / 3)
+            } else if (day > 'Day 3') {
+                target = Math.ceil(this.currentSingleTarget.MRTargetPopulation * 0.1)
+            }
             return {
-                y: d['target_population']['value'],
-                name: findDay(d.key)
+                y: target,
+                name: day
             }
         });
         return {
@@ -220,21 +396,16 @@ export class MR {
             },
             series: [{
                 name: 'Target',
-                data: target
+                data: target.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Vaccinated',
-                data: vaccinated
+                data: vaccinated.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }]
         }
     }
 
-
     @computed
     get vaccinatedOPV() {
-
-        if (this.accumulate) {
-
-        }
 
         let vaccinated = this.dailyOPV.map(d => {
             return {
@@ -245,9 +416,16 @@ export class MR {
         });
 
         let target = this.dailyOPV.map(d => {
+            const day = findDay(d.key);
+            let target = 0;
+            if (day <= 'Day 3') {
+                target = Math.ceil(this.currentSingleTarget.OPVTargetPopulation * 0.8 / 3)
+            } else if (day > 'Day 3') {
+                target = Math.ceil(this.currentSingleTarget.OPVTargetPopulation * 0.1)
+            }
             return {
-                y: d['target_population']['value'],
-                name: findDay(d.key)
+                y: target,
+                name: day
             }
         });
 
@@ -278,10 +456,10 @@ export class MR {
             },
             series: [{
                 name: 'Target',
-                data: target
+                data: target.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Vaccinated',
-                data: vaccinated
+                data: vaccinated.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }]
         }
     }
@@ -297,8 +475,14 @@ export class MR {
             });
 
             let target = this.summary.map(d => {
+
+                const current = this.currentTargets[d.key];
+                let currentTarget = 0;
+                if (current) {
+                    currentTarget = current.MRTargetPopulation;
+                }
                 return {
-                    y: d['target_population']['value'],
+                    y: currentTarget,
                     name: this.currentUnits[d.key]
 
                 }
@@ -352,8 +536,13 @@ export class MR {
             });
 
             let target = this.opvSummary.map(d => {
+                const current = this.currentTargets[d.key];
+                let currentTarget = 0;
+                if (current) {
+                    currentTarget = current.OPVTargetPopulation;
+                }
                 return {
-                    y: d['target_population']['value'],
+                    y: currentTarget,
                     name: this.currentUnits[d.key]
 
                 }
@@ -423,7 +612,7 @@ export class MR {
         let unopen = this.summary.map(d => {
 
             return {
-                y: d['no_vaccine_vials_returned_unopened']['value'],
+                y: d['no_vials_discarded_other_factors']['value'],
                 name: this.currentUnits[d.key]
             }
         });
@@ -461,7 +650,7 @@ export class MR {
                 name: 'Changed Color',
                 data: changed
             }, {
-                name: 'Returned',
+                name: 'Other Factors',
                 data: unopen
             }]
         }
@@ -495,7 +684,7 @@ export class MR {
         let unopen = this.opvSummary.map(d => {
 
             return {
-                y: d['no_vaccine_vials_returned_unopened']['value'],
+                y: d['no_vials_discarded_other_factors']['value'],
                 name: this.currentUnits[d.key]
             }
         });
@@ -533,7 +722,7 @@ export class MR {
                 name: 'Changed Color',
                 data: changed
             }, {
-                name: 'Returned',
+                name: 'Other Factors',
                 data: unopen
             }]
         }
@@ -565,7 +754,7 @@ export class MR {
 
         let unopen = this.daily.map(d => {
             return {
-                y: d['no_vaccine_vials_returned_unopened']['value'],
+                y: d['no_vials_discarded_other_factors']['value'],
                 name: findDay(d.key)
             }
         });
@@ -596,16 +785,16 @@ export class MR {
 
             series: [{
                 name: 'Contaminated',
-                data: contamination
+                data: contamination.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Partially Used',
-                data: partial
+                data: partial.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Changed Color',
-                data: changed
+                data: changed.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
-                name: 'Returned',
-                data: unopen
+                name: 'Other Factors',
+                data: unopen.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }]
         }
     }
@@ -636,7 +825,7 @@ export class MR {
 
         let unopen = this.dailyOPV.map(d => {
             return {
-                y: d['no_vaccine_vials_returned_unopened']['value'],
+                y: d['no_vials_discarded_other_factors']['value'],
                 name: findDay(d.key)
             }
         });
@@ -667,16 +856,16 @@ export class MR {
 
             series: [{
                 name: 'Contaminated',
-                data: contamination
+                data: contamination.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Partially Used',
-                data: partial
+                data: partial.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
                 name: 'Changed Color',
-                data: changed
+                data: changed.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }, {
-                name: 'Returned',
-                data: unopen
+                name: 'Other Factors',
+                data: unopen.sort((a, b) => (a.name > b.name) ? 1 : -1)
             }]
         }
     }
@@ -699,7 +888,7 @@ export class MR {
             const obj = Object.assign({}, ...Object.keys(this.single).map(k => ({ [k]: this.single[k].value })));
             let workload = vaccinated / this.single['number_health_workers']['value']
             workload = isNaN(workload) ? 0 : workload
-            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage }
+            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage,used:expected }
         }
         return { wastage: 0, dosage: 0, workload: 0, covarage: 0 };
     }
@@ -707,7 +896,7 @@ export class MR {
     @computed
     get opvTextValues() {
         if (!isEmpty(this.singleOPV)) {
-            const expected = (this.singleOPV['no_vaccine_vials_issued']['value'] - this.singleOPV['no_vaccine_vials_returned_unopened']['value']) * 10;
+            const expected = (this.singleOPV['no_vaccine_vials_issued']['value'] - this.singleOPV['no_vaccine_vials_returned_unopened']['value']) * 20;
             const vaccinated = this.singleOPV['children_vaccinated']['value'];
             const target = this.singleOPV['target_population']['value'];
             let wastage = (expected - vaccinated) / expected
@@ -721,7 +910,7 @@ export class MR {
             const obj = Object.assign({}, ...Object.keys(this.singleOPV).map(k => ({ [k]: this.singleOPV[k].value })));
             let workload = vaccinated / this.singleOPV['number_health_workers']['value']
             workload = isNaN(workload) ? 0 : workload
-            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage }
+            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage,used:expected }
         }
         return { wastage: 0, dosage: 0, workload: 0, covarage: 0 };
     }
@@ -788,109 +977,94 @@ export class MR {
 
     @computed
     get map() {
-        const computedData = this.summary.map(d => {
-            const denominator = parseInt(d['target_population']['value'], 10);
-            const numerator = parseInt(d['children_vaccinated']['value'], 10);
-            let value = 0;
-            if (!isNaN(denominator) && !isNaN(numerator)) {
-                value = denominator !== 0 ? numerator * 100 / denominator : 0
-            }
-            return { location: String(this.currentUnits[d.key]).toUpperCase(), value }
-        }).filter(x => !!x.location).map(c => {
-            return [c.location, c.value]
-        });
-        return {
-            chart: {
-                map: this.mapData
-            },
+        if (this.mapData && this.mrSummaryData) {
+            return {
+                chart: {
+                    map: JSON.parse(JSON.stringify(this.mapData)),
+                    height: '55%',
+                    width: '55%'
+                },
 
-            title: {
-                text: 'MR Rubella Vaccination Coverage'
-            },
+                title: {
+                    text: 'MR Rubella Vaccination Coverage'
+                },
 
-            mapNavigation: {
-                enabled: true,
-                buttonOptions: {
-                    verticalAlign: 'bottom'
-                }
-            },
-            tooltip: {
-                pointFormat: `{point.properties.${this.mapSearch}}`
-            },
-
-            colorAxis: {
-                tickPixelInterval: 100
-            },
-            series: [{
-                data: computedData,
-                keys: [this.mapSearch, 'value'],
-                joinBy: this.mapSearch,
-                name: 'Rubella (MR)',
-                states: {
-                    hover: {
-                        color: '#a4edba'
+                mapNavigation: {
+                    enabled: true,
+                    buttonOptions: {
+                        verticalAlign: 'bottom'
                     }
                 },
-                // dataLabels: {
-                //     enabled: true,
-                //     format: `{point.properties.${this.mapSearch}}`
-                // }
-            }]
+                tooltip: {
+                    pointFormat: `{point.properties.name}: {point.value}%`
+                },
+
+                colorAxis: {
+                    tickPixelInterval: 100
+                },
+                series: [{
+                    data: JSON.parse(JSON.stringify(this.mrSummaryData)),
+                    keys: ['id', 'value'],
+                    type: 'map',
+                    joinBy: 'id',
+                    name: 'Rubella (MR)',
+                    states: {
+                        hover: {
+                            color: '#a4edba'
+                        }
+                    },
+                    // dataLabels: {
+                    //     enabled: true,
+                    //     format: `{point.properties.${this.mapSearch}}`
+                    // }
+                }]
+            }
         }
+        return {};
     }
 
     @computed
     get opvMap() {
-        const computedData = this.opvSummary.map(d => {
-            const denominator = parseInt(d['target_population']['value'], 10);
-            const numerator = parseInt(d['children_vaccinated']['value'], 10);
-            let value = 0;
-            if (!isNaN(denominator) && !isNaN(numerator)) {
-                value = denominator !== 0 ? numerator * 100 / denominator : 0
-            }
+        if (this.mapData && this.mrSummaryData) {
+            return {
+                chart: {
+                    map: JSON.parse(JSON.stringify(this.mapData)),
+                    height: '55%',
+                    width: '55%'
+                },
 
-            return { location: String(this.currentUnits[d.key]).toUpperCase(), value }
-        }).filter(x => !!x.location).map(c => {
-            return [c.location, c.value]
-        });
-        return {
-            chart: {
-                map: this.mapData
-            },
+                title: {
+                    text: 'MR Rubella Vaccination Coverage'
+                },
 
-            title: {
-                text: 'OPV Polio Vaccination Coverage'
-            },
-
-            mapNavigation: {
-                enabled: true,
-                buttonOptions: {
-                    verticalAlign: 'bottom'
-                }
-            },
-            tooltip: {
-                pointFormat: `{point.properties.${this.mapSearch}}`
-            },
-            colorAxis: {
-                tickPixelInterval: 100
-            },
-
-            series: [{
-                data: computedData,
-                keys: [this.mapSearch, 'value'],
-                joinBy: this.mapSearch,
-                name: 'OPV',
-                states: {
-                    hover: {
-                        color: '#a4edba'
+                mapNavigation: {
+                    enabled: true,
+                    buttonOptions: {
+                        verticalAlign: 'bottom'
                     }
                 },
-                dataLabels: {
-                    // enabled: true,
-                    // format: `{point.properties.${this.mapSearch}}`
-                }
-            }]
+                tooltip: {
+                    pointFormat: `{point.properties.name}: {point.value}%`
+                },
+
+                colorAxis: {
+                    tickPixelInterval: 100
+                },
+                series: [{
+                    data: JSON.parse(JSON.stringify(this.opvSummaryData)),
+                    keys: ['id', 'value'],
+                    type: 'map',
+                    joinBy: 'id',
+                    name: 'Rubella (MR)',
+                    states: {
+                        hover: {
+                            color: '#a4edba'
+                        }
+                    }
+                }]
+            }
         }
+        return {};
     }
 
     @computed get gauge() {
@@ -944,14 +1118,8 @@ export class MR {
 
         const mr = this;
         function randomValue() {
-            if (mr.single) {
-                const vaccinated = mr.single['children_vaccinated'] ? mr.single['children_vaccinated']['value'] : 0;
-                const target = mr.single['target_population'] ? mr.single['target_population']['value'] : 0;
-                let covarage = (vaccinated * 100 / target).toFixed(1);
-                covarage = isNaN(covarage) ? 0 : covarage;
-                hand.showValue(parseFloat(covarage), 1000, am4core.ease.cubicOut);
-                chart.setTimeout(randomValue, 2000);
-            }
+            hand.showValue(parseFloat(mr.estimates), 1000, am4core.ease.cubicOut);
+            chart.setTimeout(randomValue, 2000);
         }
         return chart;
     }
@@ -1004,15 +1172,26 @@ export class MR {
         chart.setTimeout(randomValue, 1000);
 
         const mr = this;
-
         function randomValue() {
-            const vaccinated = mr.singleOPV['children_vaccinated'] ? mr.singleOPV['children_vaccinated']['value'] : 0;
-            const target = mr.singleOPV['target_population'] ? mr.singleOPV['target_population']['value'] : 0;
-            let covarage = (vaccinated * 100 / target).toFixed(1);
-            covarage = isNaN(covarage) ? 0 : covarage;
-            hand.showValue(parseFloat(covarage), 1000, am4core.ease.cubicOut);
+            hand.showValue(parseFloat(mr.opvEstimates), 1000, am4core.ease.cubicOut);
             chart.setTimeout(randomValue, 2000);
         }
         return chart;
+    }
+
+    @computed get estimates() {
+        if (this.textValues && this.currentMRTarget !== 0) {
+            const value = (this.textValues.children_vaccinated * 100 / this.currentMRTarget).toFixed(1);
+            return isNaN(value) ? 0 : value
+        }
+        return 0;
+    }
+
+    @computed get opvEstimates() {
+        if (this.opvTextValues && this.currentOPVTarget !== 0) {
+            const value = (this.opvTextValues.children_vaccinated * 100 / this.currentOPVTarget).toFixed(1);
+            return isNaN(value) ? 0 : value
+        }
+        return 0;
     }
 }
