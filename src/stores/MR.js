@@ -1,11 +1,10 @@
 import { action, computed, observable } from 'mobx';
 import socketClient from 'socket.io-client';
 import axios from 'axios';
-import { isEmpty, fromPairs, groupBy, flatten } from 'lodash';
+import { isEmpty, fromPairs } from 'lodash';
 // import mapData from './mapData';
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
-import * as am4maps from "@amcharts/amcharts4/maps";
 import shortid from 'shortid';
 
 // import * as am4charts from "@amcharts/amcharts4/charts";
@@ -14,6 +13,7 @@ import { mrTargets, opvTargets } from './Targets'
 
 am4core.useTheme(am4themes_animated);
 const url = 'https://mrengine.hispuganda.org';
+// const url = 'http://localhost:3001';
 const socket = socketClient(url);
 
 
@@ -145,7 +145,7 @@ export class MR {
 
                 let workload = workers !== 0 ? (numerator / workers).toFixed(0) : 0;
                 const coverage = target !== 0 ? (numerator * 100 / target).toFixed(1) : 0
-                const expected = (vials - returned) * (isMR?10:20);
+                const expected = (vials - returned) * (isMR ? 10 : 20);
                 let wastage = 100 * (expected - numerator) / expected;
 
                 const bossCoverage = bossTarget !== 0 ? (100 * numerator / bossTarget).toFixed(1) : 0
@@ -173,7 +173,7 @@ export class MR {
             const returned = parseInt(d['no_vaccine_vials_returned_unopened']['value'], 10);
             const workers = parseInt(d['number_health_workers']['value']);
 
-            const expected = (vials - returned) * (isMR?10:20);
+            const expected = (vials - returned) * (isMR ? 10 : 20);
 
             let bossTarget = 0;
 
@@ -199,7 +199,6 @@ export class MR {
         });
         currentSummaryData = [...currentSummaryData, ...summrized]
         return { currentSummaryData, currentTableData, cumulative }
-
     }
 
     fetchRegionalDistricts = async (units, targets, what = '') => {
@@ -879,16 +878,16 @@ export class MR {
             const target = this.single['target_population']['value'];
             let wastage = (expected - vaccinated) / expected
             let dosage = vaccinated / expected
-            wastage = wastage.toFixed(2);
-            dosage = dosage.toFixed(2);
+            wastage = Number(wastage.toFixed(2));
+            dosage = Number(dosage.toFixed(2));
             wastage = isNaN(wastage) ? 0 : wastage
             dosage = isNaN(dosage) ? 0 : dosage
-            let covarage = (vaccinated * 100 / target).toFixed(1);
+            let covarage = Number((vaccinated * 100 / target).toFixed(1));
             covarage = isNaN(covarage) ? 0 : covarage
             const obj = Object.assign({}, ...Object.keys(this.single).map(k => ({ [k]: this.single[k].value })));
             let workload = vaccinated / this.single['number_health_workers']['value']
             workload = isNaN(workload) ? 0 : workload
-            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage,used:expected }
+            return { ...obj, wastage, dosage, workload: Number(workload.toFixed(1)), covarage, used: expected }
         }
         return { wastage: 0, dosage: 0, workload: 0, covarage: 0 };
     }
@@ -910,7 +909,7 @@ export class MR {
             const obj = Object.assign({}, ...Object.keys(this.singleOPV).map(k => ({ [k]: this.singleOPV[k].value })));
             let workload = vaccinated / this.singleOPV['number_health_workers']['value']
             workload = isNaN(workload) ? 0 : workload
-            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage,used:expected }
+            return { ...obj, wastage, dosage, workload: workload.toFixed(1), covarage, used: expected }
         }
         return { wastage: 0, dosage: 0, workload: 0, covarage: 0 };
     }
@@ -1181,7 +1180,7 @@ export class MR {
 
     @computed get estimates() {
         if (this.textValues && this.currentMRTarget !== 0) {
-            const value = (this.textValues.children_vaccinated * 100 / this.currentMRTarget).toFixed(1);
+            const value = Number((this.textValues.children_vaccinated * 100 / this.currentMRTarget).toFixed(1));
             return isNaN(value) ? 0 : value
         }
         return 0;
@@ -1189,7 +1188,7 @@ export class MR {
 
     @computed get opvEstimates() {
         if (this.opvTextValues && this.currentOPVTarget !== 0) {
-            const value = (this.opvTextValues.children_vaccinated * 100 / this.currentOPVTarget).toFixed(1);
+            const value = Number((this.opvTextValues.children_vaccinated * 100 / this.currentOPVTarget).toFixed(1));
             return isNaN(value) ? 0 : value
         }
         return 0;

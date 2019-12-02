@@ -17,6 +17,8 @@ class OuTreeDialog extends React.Component {
     }
 
     render() {
+
+        const { onOrgUnitSelect } = this.props
         return (
             <div style={{ marginLeft: 'auto' }}>
                 <div >
@@ -45,7 +47,7 @@ class OuTreeDialog extends React.Component {
                         deselectAllTooltipFontColor="#000000"
                         displayNameProperty={'displayName'}
                         onClose={this.store.toggleDialog}
-                        onUpdate={this.store.onOrgUnitSelect}
+                        onUpdate={onOrgUnitSelect}
                         checkboxColor="secondary"
                         maxWidth="lg"
                     />

@@ -13,7 +13,7 @@ import 'moment/locale/ur';
 import enTranslations from './en/translations.json';
 import urTranslations from './ur/translations.json';
 
-const namespace = 'function-updater';
+const namespace = 'cc';
 moment.locale('en');
 
 i18n.addResources('en', namespace, enTranslations);

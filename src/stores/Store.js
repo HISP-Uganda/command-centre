@@ -1,6 +1,10 @@
 import { action, observable } from 'mobx';
 import { RouterStore } from 'mobx-router';
 import { MR } from './MR';
+import { Form4MR } from './Form4MR';
+import { Check } from './Check';
+import { Form4OPV } from './Form4OPV';
+import { Management } from './Management';
 class Store {
 
     @observable d2;
@@ -13,6 +17,10 @@ class Store {
     @observable root = undefined;
     @observable userOrgUnits = [];
     @observable MR = new MR();
+    @observable form4MR = new Form4MR();
+    @observable form4OPV = new Form4OPV();
+    @observable check = new Check();
+    @observable management = new Management()
 
     @observable selected = [];
     @observable group = [];
@@ -21,7 +29,6 @@ class Store {
     @observable groupOptions = [];
     @observable router = new RouterStore();
     @observable active = '1'
-
 
     @observable dialogOpened = false;
 
@@ -60,6 +67,70 @@ class Store {
         this.setDialogOpened(!this.dialogOpened);
     };
 
+    @action fetchChecklist = async () => {
+        this.check.setD2(this.d2);
+
+        const data = await this.d2
+            .currentUser
+            .getOrganisationUnits({
+                paging: false,
+                fields: `id,path,name,level,displayShortName~rename(displayName),children::isNotEmpty`,
+            });
+
+        const rootLevel = data.toArray().find(d => {
+            return String(d.displayName).includes('(Form 4)') === false && String(d.displayName) !== 'MoH MR Campaign'
+        });
+        this.setRoot(rootLevel);
+        this.setSelected([{ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name }]);
+        await this.check.setCurrentSearch({ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name });
+
+    }
+
+    @action fetchManagement = async () => {
+        this.management.setD2(this.d2);
+        await this.management.setCurrentSearch()
+    }
+
+
+    @action fetchForm4 = async () => {
+        this.form4MR.setD2(this.d2)
+        const data = await this.d2
+            .currentUser
+            .getOrganisationUnits({
+                paging: false,
+                fields: `id,path,name,level,displayShortName~rename(displayName),children::isNotEmpty`,
+            });
+
+        const rootLevel = data.toArray().find(d => {
+            return String(d.name) === 'MoH MR Campaign' || String(d.name).includes('(Form 4)')
+        });
+
+        this.setRoot(rootLevel);
+
+        this.setSelected([{ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name }]);
+        await this.form4MR.setCurrentSearch({ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name });
+    }
+
+
+    @action fetchForm4OPV = async () => {
+        this.form4OPV.setD2(this.d2)
+        const data = await this.d2
+            .currentUser
+            .getOrganisationUnits({
+                paging: false,
+                fields: `id,path,name,level,displayShortName~rename(displayName),children::isNotEmpty`,
+            });
+
+        const rootLevel = data.toArray().find(d => {
+            return String(d.name) === 'MoH MR Campaign' || String(d.name).includes('(Form 4)')
+        });
+
+        this.setRoot(rootLevel);
+
+        this.setSelected([{ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name }]);
+        await this.form4OPV.setCurrentSearch({ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name });
+    }
+
     @action fetchRoot = async () => {
         const data = await this.d2
             .currentUser
@@ -68,8 +139,13 @@ class Store {
                 fields: `id,path,name,level,displayShortName~rename(displayName),children::isNotEmpty`,
             });
 
-        const rootLevel = data.toArray()[0];
-        this.setRoot(rootLevel)
+        const rootLevel = data.toArray().find(d => {
+            return String(d.displayName).includes('(Form 4)') === false && String(d.displayName) !== 'MoH MR Campaign'
+        });
+
+
+        this.setRoot(rootLevel);
+
         this.MR.setD2(this.d2);
         this.setSelected([{ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name }]);
         await this.MR.setCurrentSearch({ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name });
@@ -80,8 +156,31 @@ class Store {
     @action onOrgUnitSelect = async () => {
         if (this.selected.length > 0) {
             const ou = this.selected[0];
-            console.log(ou);
             this.MR.setCurrentSearch(ou);
+        }
+        this.setOrgUnitDialog(false);
+    };
+
+    @action onOrgUnitSelect2 = async () => {
+        if (this.selected.length > 0) {
+            const ou = this.selected[0];
+            this.check.setCurrentSearch(ou);
+        }
+        this.setOrgUnitDialog(false);
+    };
+
+    @action onOrgUnitSelect1 = async () => {
+        if (this.selected.length > 0) {
+            const ou = this.selected[0];
+            this.form4MR.setCurrentSearch(ou);
+        }
+        this.setOrgUnitDialog(false);
+    };
+
+    @action onOrgUnitSelect3 = async () => {
+        if (this.selected.length > 0) {
+            const ou = this.selected[0];
+            this.form4OPV.setCurrentSearch(ou);
         }
         this.setOrgUnitDialog(false);
     };

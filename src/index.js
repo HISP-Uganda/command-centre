@@ -33,8 +33,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 const init = async () => {
-    await getUserSettings()
-    const initializedD2 = await d2Init(config);
+    const initializedD2 = await getUserSettings().then(() => d2Init(config));
+    initializedD2.i18n.translations['id'] = 'Id';
     store.setD2(initializedD2);
     ReactDOM.render(
         <Provider store={store}>

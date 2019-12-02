@@ -12,6 +12,8 @@
   margin: 0;
   padding: 0;
   line-height: 48px;
+  display: flex;
+  padding: 5px;
   background: #d9edf7;
 }
 .modified-item:hover {
@@ -29,6 +31,12 @@
 .red {
   color: #ff0000;
   font-size: 28px;
+  font-family: Arial;
+}
+
+.management {
+  color: #ff0000;
+  font-size: 48px;
   font-family: Arial;
 }
 
