@@ -3,6 +3,7 @@ import _ from 'lodash';
 
 import * as am4core from "@amcharts/amcharts4/core";
 import * as am4charts from "@amcharts/amcharts4/charts";
+const url = 'https://mrengine.hispuganda.org';
 
 export class Form4MR {
     @observable d2;
@@ -14,6 +15,9 @@ export class Form4MR {
     @observable disaggregated = {};
     @observable target = {};
     @observable childrenTargets = {};
+    currentMap = null;
+    @observable hasFinished = true;
+    @observable level = 1;
 
     @action setD2 = val => this.d2 = val;
 
@@ -22,6 +26,7 @@ export class Form4MR {
         this.currentValue = val.id;
         this.currentSelected = val;
         const level = val.path.split('/').length - 1;
+        this.level = level;
         if (level === 1) {
             this.currentSearch = 'national';
         } else if (level === 2) {
@@ -33,16 +38,15 @@ export class Form4MR {
         } else if (level === 4) {
             this.currentSearch = 'subcounties'
         }
-
         const { children } = await api.get('organisationUnits/' + this.currentValue, { fields: 'children[id,name]' });
         this.currentUnits = _.fromPairs(children.map(child => [child.id, String(child.name).trim()]));
         await this.fetchData();
-
     };
 
 
     @action
     fetchData = async () => {
+        this.hasFinished = false;
         const periods = ['20191016', '20191017', '20191018', '20191020', '20191019', '20191021', '20191022'];
         const targetPeriods = ['2019']
         const mrElements = ['oYj6mVgFf2H', 'w0cmARVOU5R', 'IJto5FYpVQj', 'YXHgULYggAk', 'JBTIv3B1o33', 'xsNReBPJlir', 'mOKgl35QkC2', 'bN9fLm3yW9P', 'Icac7PqUQkj', 'cWx5GXE1cWl', 'DRsiOLxd0pE', 'vXlet9fafzD', 'sU2sCm75JZx', 'hkVZTeoFVgE', 'NpQYSATdBKx'];
@@ -89,12 +93,15 @@ export class Form4MR {
         const allData = await Promise.all([this.d2.analytics.aggregate.get(req), this.d2.analytics.aggregate.get(req2), this.d2.analytics.aggregate.get(req3)]);
         const allTargets = await Promise.all([this.d2.analytics.aggregate.get(targetRequest), this.d2.analytics.aggregate.get(targetRequestChildren)]);
 
+        const query = await fetch(`${url}/maps?level=${this.level}`);
+        this.currentMap = await query.json();
+
         this.dailyData = allData[0];
         this.disaggregated = allData[1];
         this.summaryData = allData[2];
         this.target = allTargets[0];
         this.childrenTargets = allTargets[1];
-
+        this.hasFinished = true;
     }
 
     @computed
@@ -270,6 +277,86 @@ export class Form4MR {
 
         }
         return {};
+    }
+
+    titleCase = (string) => {
+        var sentence = string.toLowerCase().split(" ");
+        for (var i = 0; i < sentence.length; i++) {
+            sentence[i] = sentence[i][0].toUpperCase() + sentence[i].slice(1);
+        }
+        return sentence.join(" ");
+    }
+
+    @computed
+    get disaggregatedMap() {
+
+        const elements = ['oYj6mVgFf2H', 'w0cmARVOU5R', 'IJto5FYpVQj', 'YXHgULYggAk'];
+        if (this.disaggregated.rows) {
+
+            let data = this.disaggregated.rows.filter(r => {
+                return elements.indexOf(r[0]) !== -1;
+            }).map(e => {
+                return { de: e[0], ou: e[1], value: Number(e[2]) }
+            });
+
+            const vaccinated = _(data)
+                .groupBy('ou')
+                .map((objs, key) => ({
+                    'name': key,
+                    'y': _.sumBy(objs, 'value')
+                }))
+                .value();
+
+
+            const targets = vaccinated.sort((a, b) => (a.name > b.name) ? 1 : -1).map((v, i) => {
+                if (this.childrenTargets.rows) {
+                    const target = this.childrenTargets.rows.find(b => v.name === b[1]);
+                    if (target) {
+                        return {
+                            ...v,
+                            y: Math.round(Number(target[2]))
+
+                        }
+                    }
+                }
+                return {
+                    ...v,
+                    y: 0
+                }
+            }).map(e => {
+                return {
+                    ...e,
+                    name: this.disaggregated.metaData.items[e.name]['name']
+                }
+            });
+
+
+            const finalVaccinated = vaccinated.map(e => {
+                return {
+                    ...e,
+                    name: this.disaggregated.metaData.items[e.name]['name']
+                }
+            });
+
+            const vals = finalVaccinated.map(v => {
+                const target = targets.find(x => x.name === v.name);
+                if (target) {
+                    return [this.titleCase(String(v.name).replace(' (Form 4)', '')), Number(100 * v.y / target.y).toFixed(2)]
+                }
+                return [this.titleCase(String(v.name).replace(' (Form 4)', '')), 0]
+            });
+
+            const map = _.fromPairs(vals)
+
+            return this.currentMap.map(mp => {
+                let properties = mp.properties;
+                const value = map[properties.name] || 0
+                properties = { ...properties, value };
+                return { ...mp, properties }
+            })
+        }
+        return null;
+
     }
 
     @computed

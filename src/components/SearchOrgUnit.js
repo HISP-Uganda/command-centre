@@ -4,8 +4,6 @@ import { units } from '../utils'
 
 const { Option } = Select;
 
-
-
 export class SearchOrgUnit extends React.Component {
     state = {
         data: units,
@@ -27,7 +25,7 @@ export class SearchOrgUnit extends React.Component {
                 value={value}
                 placeholder={placeholder}
                 style={style}
-                defaultActiveFirstOption={false}
+                // defaultActiveFirstOption={false}
                 showArrow={false}
                 filterOption={false}
                 onSearch={this.handleSearch}

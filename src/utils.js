@@ -510,7 +510,6 @@ export const deducePeriodType = (periods) => {
             switch (period) {
                 case 'THIS_QUARTER':
                     const currentQuarter = moment().format('YYYY[Q]Q');
-                    console.log(currentQuarter);
                     return getMonthsOfQuarter(currentQuarter);
                 case 'LAST_QUARTER':
                     const current = moment().quarter() - 1;

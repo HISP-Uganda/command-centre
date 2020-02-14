@@ -8,17 +8,14 @@ import App from './App';
 import './App.css';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-
+import 'leaflet/dist/leaflet.css'
 // import i18n from './locales';
 import { store } from './stores/Store';
 let baseUrl;
 if (process.env.NODE_ENV === 'development') {
-    // config.baseUrl = 'http://localhost:8080/api'
-    // baseUrl = 'http://localhost:8080';
     config.baseUrl = 'https://mrcommandcentre.org/api'
     baseUrl = 'https://mrcommandcentre.org'
     config.headers = { Authorization: 'Basic YWRtaW46RGlzdHJpY3QxIw==' };
-    // config.headers = { Authorization: 'Basic YWRtaW46ZGlzdHJpY3Q=' };
 } else {
     let urlArray = window.location.pathname.split('/');
     let apiIndex = urlArray.indexOf('api');

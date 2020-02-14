@@ -20,7 +20,7 @@ export class Management {
     @observable loading = false;
 
     @observable selectedPeriods = [{
-        id: 'THIS_YEAR', name: 'This Year'
+        id: 'LAST_3_MONTHS', name: 'Last 3 Months'
     }];
 
     @observable dialogOpened = false;
@@ -48,8 +48,8 @@ export class Management {
         await this.fetchData();
     };
 
-    @action setCurrentSearch = async () => {
-        // this.currentValue = val;
+    @action setCurrentSearch = async (val) => {
+        this.currentValue = val;
         await this.fetchData();
 
     };
@@ -134,12 +134,6 @@ export class Management {
                 title: {
                     text: this.currentDisplay
                 },
-                // subtitle: {
-                //     text: this.description
-                // },
-                // xAxis: {
-                //     categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-                // },
                 yAxis: {
                     title: {
                         text: 'Value'

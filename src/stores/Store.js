@@ -88,7 +88,7 @@ class Store {
 
     @action fetchManagement = async () => {
         this.management.setD2(this.d2);
-        await this.management.setCurrentSearch()
+        await this.management.fetchData()
     }
 
 
@@ -149,8 +149,6 @@ class Store {
         this.MR.setD2(this.d2);
         this.setSelected([{ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name }]);
         await this.MR.setCurrentSearch({ id: rootLevel.id, path: rootLevel.path, level: rootLevel.level, displayName: rootLevel.name });
-        // this.loadOrgUnitLevels();
-        // this.loadOrgUnitGroups();
     };
 
     @action onOrgUnitSelect = async () => {
@@ -259,5 +257,3 @@ class Store {
 }
 
 export const store = new Store();
-
-
