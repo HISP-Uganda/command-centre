@@ -11,6 +11,8 @@ import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css'
 // import i18n from './locales';
 import { store } from './stores/Store';
+import './index.css';
+// import './styles.css';
 let baseUrl;
 if (process.env.NODE_ENV === 'development') {
     config.baseUrl = 'https://mrcommandcentre.org/api'

@@ -2,6 +2,7 @@ import React from 'react'
 import { inject, observer } from "mobx-react";
 import { Form4 } from './displays';
 import { isEmpty } from 'lodash'
+import Loading from './Loading';
 
 @inject('store')
 @observer
@@ -50,7 +51,7 @@ class MR4Dashboard extends React.Component {
                     onOrgUnitSelect={this.store.onOrgUnitSelect1}
                     discarded={this.store.form4MR.textValues.dosesDiscarded}
                     wastageSummary={this.store.form4MR.wastageGraph}
-                /> : <div>Loading...</div>}
+                /> : <Loading />}
             </div>
 
         )

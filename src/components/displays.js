@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Tabs, Progress } from 'antd';
 
 import Highcharts from 'highcharts';
@@ -11,10 +11,8 @@ import exporting from 'highcharts/modules/exporting';
 import fullScreen from 'highcharts/modules/full-screen';
 import OuTreeDialog from './dialogs/OuTreeDialog';
 import MapChart from './Map';
-import { Map, GeoJSON, TileLayer } from 'react-leaflet';
 import { Responsive, WidthProvider } from 'react-grid-layout';
-import L from 'leaflet';
-import { isEmpty } from 'lodash'
+import { CCMap } from './CCMap';
 
 HC_more(Highcharts);
 gauge(Highcharts);
@@ -45,7 +43,6 @@ const layouts = {
         { "w": 3, "h": 2, "x": 9, "y": 12, "i": "l", "moved": false, "static": true }
     ]
 }
-
 export const MainTab = ({ vaccinated, disaggregated, wastage, disaggregatedWastage }) => {
     return <Tabs defaultActiveKey="1">
         <TabPane tab="Performance(Daily)" key="1">
@@ -88,51 +85,7 @@ export const TextValue = ({ color, label, value, className, width }) => {
 }
 
 
-export const Form4 = ({ d2, disease, location, map, currentMap, vials, used, vaccinated, vaccinatedGraphData, target, coverage, wastageGraphData, wastage, workers, workload, disaggregatedGraphData, disaggregatedWastageGraphData, onOrgUnitSelect, discarded, wastageSummary }) => {
-    const getColor = (d) => {
-        return d > 95 ? '#125212' : d > 75 ? '#70ff7e' : d > 50 ? '#fef900' : '#BD0026';
-    }
-
-    const style = (feature) => {
-        return {
-            fillColor: getColor(feature.properties.value),
-            weight: 1,
-            opacity: 1,
-            color: 'black',
-            fillOpacity: 0.7
-        };
-    }
-
-    useEffect(() => {
-
-    }, [])
-
-    const onEachFeature1 = (feature, layer) => {
-        if (feature.properties) {
-            var popupString = '<div class="popup">';
-            for (var k in feature.properties) {
-                var v = feature.properties[k];
-                popupString += k + ': ' + v + '<br />';
-            }
-            popupString += '</div>';
-            layer.bindPopup(popupString);
-        }
-        if (!(layer instanceof L.Point)) {
-            // layer.on('mouseover', function () {
-            //     layer.setStyle(hoverStyle);
-            // });
-            // layer.on('mouseout', function () {
-            //     layer.setStyle(style);
-            // });
-        }
-    }
-
-    // const final = currentMap.map(mp => {
-    //     let properties = mp.properties;
-    //     const value = map[properties.name] || 0
-    //     properties = { ...properties, value };
-    //     return { ...mp, properties }
-    // })
+export const Form4 = ({ d2, disease, location, map, vials, used, vaccinated, vaccinatedGraphData, target, coverage, wastageGraphData, wastage, workers, workload, disaggregatedGraphData, disaggregatedWastageGraphData, onOrgUnitSelect, discarded, wastageSummary }) => {
 
     return <ResponsiveGridLayout className="layout" layouts={layouts}
         breakpoints={{ xxl: 3400, lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
@@ -173,18 +126,7 @@ export const Form4 = ({ d2, disease, location, map, currentMap, vials, used, vac
             </div>
         </div>
         <div key="g" >
-            <Map center={[1.3707295, 32.3032414]} zoom={6} style={{ height: 500 }}>
-                {/* <TileLayer
-                    attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                /> */}
-                <GeoJSON data={map} style={style} onEachFeature={onEachFeature1} />
-                {/* <Legend /> */}
-            </Map>
-            {/* <div id="map" style={{ height: 500 }}>
-
-            </div> */}
-            {/* <MapChart options={map} /> */}
+            <CCMap map={map} />
         </div>
 
         <div key="h" style={{ background: 'white' }} className="flex-center">
